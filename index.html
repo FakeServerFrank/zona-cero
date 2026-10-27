@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Hub</title>
+<style>
+:root{--bg:#1e1b3a;--panel:#2a2656;--panel2:#352f6b;--ink:#f2eeff;--muted:#a9a3d6;--accent:#ffb547;--ok:#5ee0a0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif}
+body{padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+.wrap{max-width:720px;margin:0 auto}
+.profile{display:flex;gap:16px;align-items:center;background:var(--panel);border-radius:20px;padding:16px}
+.avatar{width:84px;height:84px;border-radius:50%;background:var(--panel2);border:3px solid var(--accent);font-size:44px;display:grid;place-items:center;flex:none;cursor:pointer}
+.info{flex:1;min-width:0}
+.name{font-size:22px;font-weight:700;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank{color:var(--accent);font-weight:700;margin:2px 0 8px}
+.bar{height:8px;background:var(--panel2);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+.stats{display:flex;gap:8px;margin-top:12px}
+.stat{flex:1;background:var(--panel);border-radius:14px;padding:10px;text-align:center}
+.stat b{display:block;font-size:20px}
+.stat span{color:var(--muted);font-size:12px}
+h2{font-size:16px;margin:22px 0 10px;color:var(--muted);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:12px}
+.app{background:var(--panel);border:0;color:var(--ink);border-radius:18px;padding:14px 6px;font:inherit;cursor:pointer;text-align:center;min-height:96px}
+.app:active{transform:scale(.96)}
+.app .ico{font-size:34px;display:block;margin-bottom:6px}
+.app span{font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app.main{grid-column:1/-1;display:flex;align-items:center;gap:14px;background:var(--accent);color:#2a1d00;text-align:left;padding:16px}
+.app.main .ico{font-size:40px;margin:0}
+.app.main span{font-size:18px;font-weight:700}
+.app.main small{display:block;font-size:13px}
+.app.add{background:transparent;border:2px dashed var(--panel2);color:var(--muted)}
+dialog{border:0;border-radius:20px;background:var(--panel);color:var(--ink);width:min(92vw,380px);padding:20px}
+dialog::backdrop{background:rgba(10,8,30,.7)}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input,select{width:100%;padding:12px;border-radius:12px;border:2px solid var(--panel2);background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:10px;margin-top:16px}
+.btn{flex:1;padding:12px;border:0;border-radius:12px;font:inherit;font-weight:700;cursor:pointer}
+.btn.p{background:var(--accent);color:#2a1d00}
+.btn.s{background:var(--panel2);color:var(--ink)}
+.emojis{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.emojis button{font-size:26px;background:var(--bg);border:2px solid var(--panel2);border-radius:12px;width:48px;height:48px;cursor:pointer}
+.emojis button.on{border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="profile">
+    <div class="avatar" id="avatar" role="button" tabindex="0" aria-label="Editar perfil">🎮</div>
+    <div class="info">
+      <p class="name" id="name">Jugador</p>
+      <p class="rank" id="rank">Bronce</p>
+      <div class="bar"><i id="xp"></i></div>
+      <button class="btn s" id="bAuth" style="margin-top:10px;padding:8px 14px;flex:none">Iniciar sesión</button>
+    </div>
+  </section>
+  <div class="stats">
+    <div class="stat"><b id="sPartidas">0</b><span>Partidas</span></div>
+    <div class="stat"><b id="sVictorias">0</b><span>Victorias</span></div>
+    <div class="stat"><b id="sBajas">0</b><span>Bajas</span></div>
+  </div>
+
+  <h2>Mis apps</h2>
+  <div class="grid" id="grid"></div>
+</div>
+
+<dialog id="dPerfil">
+  <strong>Editar perfil</strong>
+  <label>Foto</label>
+  <div class="emojis" id="emojis"></div>
+  <label for="iName">Nombre</label>
+  <input id="iName" maxlength="20" autocomplete="off">
+  <label for="iRank">Rango</label>
+  <select id="iRank"></select>
+  <div class="row"><button class="btn s" id="pCancel">Cancelar</button><button class="btn p" id="pSave">Guardar</button></div>
+</dialog>
+
+<dialog id="dApp">
+  <strong>Añadir app</strong>
+  <label for="aName">Nombre</label>
+  <input id="aName" maxlength="14" autocomplete="off">
+  <label for="aIco">Icono (un emoji)</label>
+  <input id="aIco" maxlength="2" value="⭐">
+  <label for="aUrl">Enlace</label>
+  <input id="aUrl" type="url" placeholder="https://...">
+  <div class="row"><button class="btn s" id="aCancel">Cancelar</button><button class="btn p" id="aSave">Añadir</button></div>
+</dialog>
+
+<dialog id="dLogin">
+  <strong>Entra con tu cuenta del shooter</strong>
+  <label for="lMail">Correo</label>
+  <input id="lMail" type="email" autocomplete="email">
+  <label for="lPass">Contraseña</label>
+  <input id="lPass" type="password" autocomplete="current-password">
+  <p id="lMsg" style="color:var(--accent);min-height:20px;margin:10px 0 0;font-size:14px" role="alert"></p>
+  <div class="row"><button class="btn s" id="lCancel">Cancelar</button><button class="btn p" id="lIn">Entrar</button></div>
+  <div class="row"><button class="btn s" id="lNew">Crear cuenta nueva</button></div>
+</dialog>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var RANGOS=["Bronce","Plata","Oro","Platino","Diamante","Maestro","Leyenda"];
+var FOTOS=["🎮","😎","🥷","🤠","🦊","🐺","👑","🔥"];
+var DEF={foto:"🎮",nombre:"Jugador",rango:0,partidas:0,victorias:0,bajas:0,
+  shooterUrl:"",apps:[{n:"Música",i:"🎵",u:""},{n:"Cine",i:"🎬",u:""}]};
+var S;
+
+function cargar(){
+  try{var t=localStorage.getItem("hub-v1");S=t?Object.assign({},DEF,JSON.parse(t)):JSON.parse(JSON.stringify(DEF))}
+  catch(e){S=JSON.parse(JSON.stringify(DEF))}
+}
+function guardar(){try{localStorage.setItem("hub-v1",JSON.stringify(S))}catch(e){}}
+function $(id){return document.getElementById(id)}
+
+function pintar(){
+  $("avatar").textContent=S.foto;
+  $("name").textContent=S.nombre;
+  $("rank").textContent=S.rangoTxt||RANGOS[S.rango];
+  $("xp").style.width=Math.round((S.rango+1)/RANGOS.length*100)+"%";
+  $("sPartidas").textContent=S.partidas;
+  $("sVictorias").textContent=S.victorias;
+  $("sBajas").textContent=S.bajas;
+
+  var g=$("grid");g.innerHTML="";
+  var m=document.createElement("button");
+  m.className="app main";
+  m.innerHTML='<span class="ico">🎯</span><div><span>Jugar shooter</span><small>'+(S.shooterUrl?"Toca para entrar":"Toca para poner el enlace")+'</small></div>';
+  m.onclick=function(){
+    if(!S.shooterUrl){
+      var u=prompt("Pega el enlace de tu shooter (Netlify):","https://");
+      if(u&&/^https?:\/\//.test(u)){S.shooterUrl=u;guardar();pintar()}
+      return;
+    }
+    location.href=S.shooterUrl;
+  };
+  g.appendChild(m);
+
+  S.apps.forEach(function(a,idx){
+    var b=document.createElement("button");b.className="app";
+    var ic=document.createElement("span");ic.className="ico";ic.textContent=a.i;
+    var nm=document.createElement("span");nm.textContent=a.n;
+    b.appendChild(ic);b.appendChild(nm);
+    b.onclick=function(){
+      if(a.u){location.href=a.u;return}
+      var u=prompt("Enlace para "+a.n+":","https://");
+      if(u&&/^https?:\/\//.test(u)){a.u=u;guardar()}
+    };
+    var t;
+    b.oncontextmenu=function(e){e.preventDefault();if(confirm("¿Quitar "+a.n+"?")){S.apps.splice(idx,1);guardar();pintar()}};
+    g.appendChild(b);
+  });
+
+  var add=document.createElement("button");add.className="app add";
+  add.innerHTML='<span class="ico">＋</span><span>Añadir app</span>';
+  add.onclick=function(){$("aName").value="";$("aIco").value="⭐";$("aUrl").value="";$("dApp").showModal()};
+  g.appendChild(add);
+}
+
+var fotoSel;
+function abrirPerfil(){
+  fotoSel=S.foto;
+  var e=$("emojis");e.innerHTML="";
+  FOTOS.forEach(function(f){
+    var b=document.createElement("button");b.textContent=f;
+    if(f===fotoSel)b.className="on";
+    b.onclick=function(){fotoSel=f;[].forEach.call(e.children,function(x){x.className=""});b.className="on"};
+    e.appendChild(b);
+  });
+  $("iName").value=S.nombre;
+  var sel=$("iRank");sel.innerHTML="";
+  RANGOS.forEach(function(r,i){var o=document.createElement("option");o.value=i;o.textContent=r;sel.appendChild(o)});
+  sel.value=S.rango;
+  $("dPerfil").showModal();
+}
+$("avatar").onclick=abrirPerfil;
+$("avatar").onkeydown=function(e){if(e.key==="Enter"||e.key===" ")abrirPerfil()};
+$("pCancel").onclick=function(){$("dPerfil").close()};
+$("pSave").onclick=function(){
+  S.foto=fotoSel;S.nombre=$("iName").value.trim()||"Jugador";S.rango=+$("iRank").value;S.rangoTxt="";
+  guardar();pintar();$("dPerfil").close();
+};
+$("aCancel").onclick=function(){$("dApp").close()};
+$("aSave").onclick=function(){
+  var n=$("aName").value.trim(),u=$("aUrl").value.trim();
+  if(!n){$("aName").focus();return}
+  if(u&&!/^https?:\/\//.test(u)){$("aUrl").focus();return}
+  S.apps.push({n:n,i:$("aIco").value||"⭐",u:u});
+  guardar();pintar();$("dApp").close();
+};
+
+/* ===== PARTE 2: cuenta compartida con el shooter ===== */
+// Pega aquí la config de tu proyecto (Firebase > Configuración del proyecto > Tus apps > Web)
+var FB_CONFIG={apiKey:"AIzaSyC3fGoKAllqDfYwpFm6z0aaAVXSGDw1zLk",authDomain:"zona-cero-b5dab.firebaseapp.com",projectId:"zona-cero-b5dab",storageBucket:"zona-cero-b5dab.firebasestorage.app",messagingSenderId:"118340280308",appId:"1:118340280308:web:84c1997a4826730170a3a1"};
+// Colección y campos donde el shooter guarda el perfil. Cámbialos si en tu shooter se llaman distinto.
+var COLECCION="usuarios";
+var auth=null,db=null,usuario=null;
+try{
+  if(window.firebase&&FB_CONFIG.apiKey!=="PEGA_AQUI"){
+    firebase.initializeApp(FB_CONFIG);auth=firebase.auth();db=firebase.firestore();
+  }
+}catch(e){}
+
+function nube(d){
+  if(d.nombre||d.username)S.nombre=d.nombre||d.username;
+  if(typeof d.rango==="string"){
+    var i=RANGOS.map(function(r){return r.toLowerCase()}).indexOf(d.rango.toLowerCase());
+    if(i>=0){S.rango=i;S.rangoTxt=""}else S.rangoTxt=d.rango;
+  }else if(typeof d.rango==="number"){S.rango=Math.max(0,Math.min(RANGOS.length-1,d.rango));S.rangoTxt=""}
+  if(typeof d.partidas==="number")S.partidas=d.partidas;
+  if(typeof d.victorias==="number")S.victorias=d.victorias;
+  if(typeof d.bajas==="number")S.bajas=d.bajas;
+}
+function errTxt(e){
+  var c=(e&&e.code)||"";
+  if(/invalid-credential|wrong-password|user-not-found/.test(c))return "Correo o contraseña incorrectos.";
+  if(c==="auth/email-already-in-use")return "Ese correo ya tiene cuenta. Toca Entrar.";
+  if(c==="auth/weak-password")return "La contraseña necesita mínimo 6 caracteres.";
+  if(c==="auth/invalid-email")return "Escribe un correo válido.";
+  return "No se pudo entrar. Revisa tu conexión.";
+}
+function msg(t){$("lMsg").textContent=t}
+function pedir(fn){
+  var m=$("lMail").value.trim(),p=$("lPass").value;
+  if(!m||!p){msg("Escribe correo y contraseña.");return}
+  msg("Conectando...");
+  fn.call(auth,m,p).then(function(){$("dLogin").close()}).catch(function(e){msg(errTxt(e))});
+}
+$("bAuth").onclick=function(){
+  if(!auth){alert("Falta pegar la configuración de Firebase dentro de index.html (FB_CONFIG).");return}
+  if(usuario){auth.signOut();return}
+  msg("");$("dLogin").showModal();
+};
+$("lCancel").onclick=function(){$("dLogin").close()};
+$("lIn").onclick=function(){if(auth)pedir(auth.signInWithEmailAndPassword)};
+$("lNew").onclick=function(){if(auth)pedir(auth.createUserWithEmailAndPassword)};
+
+var COLS=[COLECCION,"users","jugadores","players","perfiles","profiles"];
+function dbg(t){
+  var p=$("dbg");
+  if(!p){p=document.createElement("p");p.id="dbg";p.style.cssText="color:var(--muted);font-size:12px;word-break:break-word";document.querySelector(".stats").after(p)}
+  p.textContent=t;
+}
+function pick(d,ks){for(var i=0;i<ks.length;i++){if(d[ks[i]]!==undefined)return d[ks[i]]}}
+function norm(d){return{
+  nombre:pick(d,["nombre","name","username","user","nick","displayName"]),
+  rango:pick(d,["rango","rank","liga","tier"]),
+  partidas:pick(d,["partidas","partidasJugadas","matches","games","played"]),
+  victorias:pick(d,["victorias","wins","ganadas"]),
+  bajas:pick(d,["bajas","kills","eliminaciones"])}}
+function buscar(uid,i,fallos){
+  if(i>=COLS.length){dbg("No encontré tu perfil. "+fallos.join(" | "));return Promise.resolve()}
+  var c=COLS[i];
+  return db.collection(c).doc(uid).get().then(function(s){
+    if(s.exists)return s;
+    return db.collection(c).where("uid","==",uid).limit(1).get().then(function(q){return q.empty?null:q.docs[0]});
+  }).then(function(s){
+    if(s){var d=s.data();nube(norm(d));dbg("Perfil en «"+c+"», campos: "+Object.keys(d).join(", "));pintar();return}
+    fallos.push(c+": vacío");return buscar(uid,i+1,fallos);
+  }).catch(function(e){fallos.push(c+": "+(e.code||"error"));return buscar(uid,i+1,fallos)});
+}
+
+if(auth){
+  auth.onAuthStateChanged(function(u){
+    usuario=u;
+    $("bAuth").textContent=u?"Cerrar sesión":"Iniciar sesión";
+    if(!u){dbg("");pintar();return}
+    dbg("Buscando tu perfil...");
+    buscar(u.uid,0,[]).then(pintar);
+  });
+}
+
+cargar();pintar();
+</script>
+</body>
+</html>
