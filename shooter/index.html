@@ -27,8 +27,11 @@ canvas{display:block}
 #go{overflow:auto}
 #go .p,#lobby .p{background:rgba(255,255,255,.08);border-radius:14px;padding:8px 12px;margin:6px 0;font-size:13px;font-weight:400;text-align:left}
 #go h3,#lobby h3{margin:0 0 4px;font-size:14px}
-#lobby{position:fixed;inset:0;z-index:9;display:none;place-items:center;background:#1e1b3a;color:#f2eeff;text-align:center;overflow:auto;font-family:system-ui,sans-serif}
-#play{margin-top:10px;width:260px;padding:14px;border:0;border-radius:14px;background:#ffb547;color:#2a1d00;font:700 18px system-ui,sans-serif}
+#lobby{position:fixed;inset:0;z-index:9;display:none;pointer-events:none;color:#f2eeff;font-family:system-ui,sans-serif}
+.lc{position:absolute;top:12px;width:min(36vw,240px);max-height:calc(100% - 24px);overflow:auto;pointer-events:auto}
+#lobby .p{background:rgba(20,18,50,.75)}
+body.lb #hp,body.lb #mm,body.lb #ammo,body.lb #score,body.lb #cross,body.lb #joy,body.lb #fire,body.lb #rel,body.lb #ads{display:none}
+#play{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);pointer-events:auto;width:260px;padding:14px;border:0;border-radius:14px;background:#ffb547;color:#2a1d00;font:700 18px system-ui,sans-serif}
 #ammo{position:fixed;right:max(34px,env(safe-area-inset-right));bottom:136px;color:#fff;font:700 22px system-ui,sans-serif;text-shadow:0 1px 4px #000}
 #hp{position:fixed;left:max(16px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));width:150px;height:12px;background:rgba(0,0,0,.45);border-radius:8px;overflow:hidden}
 #hp i{display:block;height:100%;width:100%;background:#5ee0a0;transition:width .15s}
@@ -39,13 +42,11 @@ canvas{display:block}
 </style>
 </head>
 <body>
-<div id="go"><div>Zona Cero<small>v3 · Toca para continuar</small></div></div>
-<div id="lobby"><div style="width:min(94vw,640px);padding:8px">
-<div style="font-size:22px;font-weight:700">Lobby</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div><div class="p" id="mi">Inicia sesión en el hub para ver tu rango</div><div class="p"><h3>Misiones de hoy</h3><div id="ms"></div></div></div>
-<div><div class="p"><h3>Modo</h3>5 contra 5 · Bots · Mapa Zona Cero<br>Mejor de 5 rondas</div><div class="p"><h3>Mejores jugadores</h3><div id="top">Inicia sesión para ver la tabla</div></div></div></div>
-<button id="play">Jugar partida</button></div></div>
+<div id="go"><div>Zona Cero<small>v4 · Toca para continuar</small></div></div>
+<div id="lobby">
+<div class="lc" style="left:max(12px,env(safe-area-inset-left))"><div class="p" id="mi">Inicia sesión en el hub para ver tu rango</div><div class="p"><h3>Misiones de hoy</h3><div id="ms"></div></div></div>
+<div class="lc" style="right:max(12px,env(safe-area-inset-right));top:96px"><div class="p"><h3>Modo</h3>5 contra 5 · Bots<br>Mejor de 5 rondas</div><div class="p"><h3>Mejores jugadores</h3><div id="top">Inicia sesión para ver la tabla</div></div></div>
+<button id="play">Jugar partida</button></div>
 <div id="shop"><div><h3>Elige tu arma</h3><div id="wl"></div></div></div>
 <div id="hurt"></div><div id="cross"></div><div id="msg"></div>
 <canvas id="mm" width="110" height="110"></canvas>
@@ -69,7 +70,7 @@ R.setSize(innerWidth,innerHeight);R.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(R.domElement);
 var S=new THREE.Scene();var sk=document.createElement("canvas");sk.width=2;sk.height=256;var sx=sk.getContext("2d"),gr=sx.createLinearGradient(0,0,0,256);
 gr.addColorStop(0,"#4f86d8");gr.addColorStop(.6,"#a9d0ff");gr.addColorStop(1,"#e8f1ff");sx.fillStyle=gr;sx.fillRect(0,0,2,256);
-S.background=new THREE.CanvasTexture(sk);S.fog=new THREE.Fog(0xcfe2ff,35,100);
+S.background=new THREE.CanvasTexture(sk);S.fog=new THREE.Fog(0xcfe2ff,35,100);var SKY=S.background,LOBBG=new THREE.Color(0x14122b);
 function tex(a,b,ty,rx,ry){var c=document.createElement("canvas");c.width=c.height=64;var x=c.getContext("2d");x.fillStyle=a;x.fillRect(0,0,64,64);x.fillStyle=b;
   if(ty)for(var i=0;i<4;i++){x.fillRect(0,i*16,64,2);x.fillRect((i%2)*32,i*16,2,16)}else{x.fillRect(0,0,32,32);x.fillRect(32,32,32,32)}
   var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
@@ -179,6 +180,7 @@ function nuevoBot(team,x,z){
   g.userData.bot=b;bots.push(b);etiqueta(b,team);
 }
 function ronda(){
+  enLobby=false;document.body.classList.remove("lb");S.background=SKY;S.fog.color.set(0xcfe2ff);
   bots.forEach(function(b){S.remove(b.g)});bots=[];
   var xs=[-8,-4,4,8,0],i;
   for(i=0;i<4;i++)nuevoBot(0,xs[i],31);
@@ -272,10 +274,11 @@ function soltar(e){if(e.pointerId===jid){jid=null;jx=jy=0;knob.style.transform="
 joy.addEventListener("pointerup",soltar);joy.addEventListener("pointercancel",soltar);
 var lid=null,lx=0,ly=0,cv=R.domElement;
 cv.addEventListener("pointerdown",function(e){
-  if(lid===null&&e.clientX>innerWidth*.35){lid=e.pointerId;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId)}
+  if(lid===null&&(enLobby||e.clientX>innerWidth*.35)){lid=e.pointerId;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId)}
 });
 cv.addEventListener("pointermove",function(e){
   if(e.pointerId!==lid)return;
+  if(enLobby){lobYaw+=(e.clientX-lx)*.01;lx=e.clientX;ly=e.clientY;return}
   var k=SENS[si]*(ads?.55:1);yaw-=(e.clientX-lx)*k;pitch=Math.max(-.35,Math.min(1,pitch+(e.clientY-ly)*k*.67));
   lx=e.clientX;ly=e.clientY;
 });
@@ -330,6 +333,14 @@ var reloj=new THREE.Clock();
 function bucle(){
   requestAnimationFrame(bucle);
   var dt=Math.min(reloj.getDelta(),.05);
+  if(enLobby){
+    var tt=performance.now()/1000;
+    if(lid===null)lobYaw+=dt*.35;
+    LP.rotation.y=lobYaw;LP.position.y=Math.sin(tt*2)*.02;
+    C.fov=45;C.updateProjectionMatrix();
+    C.position.set(LX+Math.sin(tt*.4)*.6,1.7,5.4);C.lookAt(LX,1.15,0);
+    R.render(S,C);return;
+  }
   if(jugando){
     if(me.hp>0){
       var fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
@@ -368,11 +379,24 @@ function bucle(){
 }
 addEventListener("resize",function(){R.setSize(innerWidth,innerHeight);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()});
 function lobby(){
-  jugando=false;firing=false;$("shop").style.display="none";$("lobby").style.display="grid";
+  jugando=false;firing=false;enLobby=true;document.body.classList.add("lb");S.background=LOBBG;S.fog.color.set(0x14122b);$("shop").style.display="none";$("lobby").style.display="block";
   var cu=null;try{cu=firebase.auth().currentUser}catch(e){}
   if(cu)setTimeout(function(){menu(cu)},1200);
 }
 $("play").addEventListener("click",function(){$("lobby").style.display="none";win=lose=0;ronda()});
+var LX=300,enLobby=true,lobYaw=.5,LP=pers(0xffb547),LB=new THREE.Group();
+(function(){
+  function m(g,c,x,y,z,basic){var o=new THREE.Mesh(g,basic?new THREE.MeshBasicMaterial({color:c}):new THREE.MeshLambertMaterial({color:c}));o.position.set(x,y,z);LB.add(o);return o}
+  m(new THREE.CylinderGeometry(2.2,2.4,.3,32),0x2a2656,0,-.15,0);
+  var ring=m(new THREE.TorusGeometry(2.3,.06,8,48),0xffb547,0,.02,0,1);ring.rotation.x=Math.PI/2;
+  var fl=m(new THREE.PlaneGeometry(60,60),0x1b1836,0,-.31,0);fl.rotation.x=-Math.PI/2;
+  for(var i=-3;i<=3;i++){m(new THREE.BoxGeometry(1.4,5,.3),0x2f2a63,i*1.6,2.2,-4);m(new THREE.BoxGeometry(.12,4.2,.06),i%2?0xffb547:0x4aa3ff,i*1.6,2.2,-3.8,1)}
+  m(new THREE.BoxGeometry(.9,.9,.9),0x3b3480,-3.4,.15,-1.5);m(new THREE.BoxGeometry(.7,.7,.7),0x3b3480,3.4,.05,-1.8);
+  var l1=new THREE.PointLight(0xffffff,1.1,30);l1.position.set(0,5,4);LB.add(l1);
+  var l2=new THREE.PointLight(0x4aa3ff,.8,20);l2.position.set(-5,2,1);LB.add(l2);
+  LB.add(LP);LB.position.set(LX,0,0);S.add(LB);
+})();
+document.body.classList.add("lb");S.background=LOBBG;S.fog.color.set(0x14122b);
 pintaMis();bucle();
 </script>
 </body>
